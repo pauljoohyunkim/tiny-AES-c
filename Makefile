@@ -52,8 +52,8 @@ lib : aes.a
 clean:
 	rm -f *.OBJ *.LST *.o *.gch *.out *.hex *.map *.elf *.a
 
-test:
-	make clean && make && ./test.elf
+test: test.elf
+	make clean && make test.elf && ./test.elf
 #	make clean && make AES192=1 && ./test.elf
 #	make clean && make AES256=1 && ./test.elf
 
