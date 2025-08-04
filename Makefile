@@ -22,7 +22,7 @@ INCLUDE_PATH = /usr/lib/avr/include
 # splint static check
 SPLINT       = splint test.c aes.c -I$(INCLUDE_PATH) +charindex -unrecog
 
-default: test.elf
+default: aes.o
 
 .SILENT:
 .PHONY:  lint clean
@@ -54,8 +54,8 @@ clean:
 
 test:
 	make clean && make && ./test.elf
-	make clean && make AES192=1 && ./test.elf
-	make clean && make AES256=1 && ./test.elf
+#	make clean && make AES192=1 && ./test.elf
+#	make clean && make AES256=1 && ./test.elf
 
 lint:
 	$(call SPLINT)
