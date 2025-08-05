@@ -13,7 +13,6 @@
 
 static void phex(uint8_t* str);
 static int test_encrypt_ecb(void);
-static int test_decrypt_ecb(void);
 static void test_encrypt_ecb_verbose(void);
 
 

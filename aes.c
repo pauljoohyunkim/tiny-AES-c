@@ -262,7 +262,7 @@ static void dynamicKeyExpansion(uint8_t roundNum, uint8_t* roundKey)
 }
 
 // Cipher is the main function that encrypts the PlainText.
-static void Cipher(state_t* state, const uint8_t* RoundKey)
+static void Cipher(state_t* state, uint8_t* RoundKey)
 {
   uint8_t round = 0;
 
@@ -295,7 +295,7 @@ static void Cipher(state_t* state, const uint8_t* RoundKey)
 /*****************************************************************************/
 #if defined(ECB) && (ECB == 1)
 
-void AES_ECB_encrypt(const struct AES_ctx* ctx, uint8_t* buf)
+void AES_ECB_encrypt(struct AES_ctx* ctx, uint8_t* buf)
 {
   // The next function call encrypts the PlainText with the Key using AES algorithm.
   Cipher((state_t*)buf, ctx->RoundKey);

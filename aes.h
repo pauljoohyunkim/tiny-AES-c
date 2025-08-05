@@ -33,8 +33,7 @@ void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key);
 // buffer size is exactly AES_BLOCKLEN bytes; 
 // you need only AES_init_ctx as IV is not used in ECB 
 // NB: ECB is considered insecure for most uses
-void AES_ECB_encrypt(const struct AES_ctx* ctx, uint8_t* buf);
-void AES_ECB_decrypt(const struct AES_ctx* ctx, uint8_t* buf);
+void AES_ECB_encrypt(struct AES_ctx* ctx, uint8_t* buf);
 
 #endif // #if defined(ECB) && (ECB == !)
 
