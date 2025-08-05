@@ -38,6 +38,7 @@ test.o : test.c aes.h aes.o
 aes.o : aes.c aes.h
 	echo [CC] $@ $(CFLAGS)
 	$(CC) $(CFLAGS) -o $@ $<
+	size $@
 
 test.elf : aes.o test.o
 	echo [LD] $@
