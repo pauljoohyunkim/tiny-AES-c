@@ -87,10 +87,10 @@ static void test_encrypt_ecb_verbose(void)
     printf("ciphertext:\n");
     
     struct AES_ctx ctx;
-    AES_init_ctx(&ctx, key);
 
     for (i = 0; i < 4; ++i)
     {
+      AES_init_ctx(&ctx, key);
       AES_ECB_encrypt(&ctx, plain_text + (i * 16));
       phex(plain_text + (i * 16));
     }
