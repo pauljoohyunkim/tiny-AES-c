@@ -24,7 +24,7 @@
 
 struct AES_ctx
 {
-  uint8_t RoundKey[AES_keyExpSize];
+  uint8_t RoundKey[AES_KEYLEN];
 };
 
 void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key);
