@@ -50,6 +50,10 @@ aes.a : aes.o
 
 lib : aes.a
 
+debug: clean test.elf
+	echo [DEBUG] $>
+	$(CC) -g -Wall aes.c test.c -o test.elf
+
 clean:
 	rm -f *.OBJ *.LST *.o *.gch *.out *.hex *.map *.elf *.a
 

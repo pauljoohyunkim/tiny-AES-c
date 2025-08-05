@@ -62,8 +62,6 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 // state - array holding the intermediate results during decryption.
 typedef uint8_t state_t[4][4];
 
-
-
 // The lookup-tables are marked const so they can be placed in read-only storage instead of RAM
 // The numbers below can be computed dynamically trading ROM for RAM - 
 // This can be useful in (embedded) bootloader applications, where ROM is often limited.
@@ -113,83 +111,25 @@ static uint8_t getSBoxValue(uint8_t num)
 */
 #define getSBoxValue(num) (sbox[(num)])
 
-// This function produces Nb(Nr+1) round keys. The round keys are used in each round to decrypt the states. 
-static void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key)
-{
-  unsigned i, j, k;
-  uint8_t tempa[4]; // Used for the column/row operations
-  
-  // The first round key is the key itself.
-  for (i = 0; i < Nk; ++i)
-  {
-    RoundKey[(i * 4) + 0] = Key[(i * 4) + 0];
-    RoundKey[(i * 4) + 1] = Key[(i * 4) + 1];
-    RoundKey[(i * 4) + 2] = Key[(i * 4) + 2];
-    RoundKey[(i * 4) + 3] = Key[(i * 4) + 3];
-  }
-
-  // All other round keys are found from the previous round keys.
-  for (i = Nk; i < Nb * (Nr + 1); ++i)
-  {
-    {
-      k = (i - 1) * 4;
-      tempa[0]=RoundKey[k + 0];
-      tempa[1]=RoundKey[k + 1];
-      tempa[2]=RoundKey[k + 2];
-      tempa[3]=RoundKey[k + 3];
-
-    }
-
-    if (i % Nk == 0)
-    {
-      // This function shifts the 4 bytes in a word to the left once.
-      // [a0,a1,a2,a3] becomes [a1,a2,a3,a0]
-
-      // Function RotWord()
-      {
-        const uint8_t u8tmp = tempa[0];
-        tempa[0] = tempa[1];
-        tempa[1] = tempa[2];
-        tempa[2] = tempa[3];
-        tempa[3] = u8tmp;
-      }
-
-      // SubWord() is a function that takes a four-byte input word and 
-      // applies the S-box to each of the four bytes to produce an output word.
-
-      // Function Subword()
-      {
-        tempa[0] = getSBoxValue(tempa[0]);
-        tempa[1] = getSBoxValue(tempa[1]);
-        tempa[2] = getSBoxValue(tempa[2]);
-        tempa[3] = getSBoxValue(tempa[3]);
-      }
-
-      tempa[0] = tempa[0] ^ Rcon[i/Nk];
-    }
-    j = i * 4; k=(i - Nk) * 4;
-    RoundKey[j + 0] = RoundKey[k + 0] ^ tempa[0];
-    RoundKey[j + 1] = RoundKey[k + 1] ^ tempa[1];
-    RoundKey[j + 2] = RoundKey[k + 2] ^ tempa[2];
-    RoundKey[j + 3] = RoundKey[k + 3] ^ tempa[3];
-  }
-}
-
 void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key)
 {
-  KeyExpansion(ctx->RoundKey, key);
+  // Loading key
+  for (uint8_t i = 0; i < AES_KEYLEN; i++)
+  {
+    ctx->RoundKey[i] = key[i];
+  }
 }
 
 // This function adds the round key to state.
 // The round key is added to the state by an XOR function.
-static void AddRoundKey(uint8_t round, state_t* state, const uint8_t* RoundKey)
+static void dynamicAddRoundKey(state_t* state, const uint8_t* RoundKey)
 {
   uint8_t i,j;
   for (i = 0; i < 4; ++i)
   {
     for (j = 0; j < 4; ++j)
     {
-      (*state)[i][j] ^= RoundKey[(round * Nb * 4) + (i * Nb) + j];
+      (*state)[i][j] ^= RoundKey[(i * Nb) + j];
     }
   }
 }
@@ -283,13 +223,51 @@ static uint8_t Multiply(uint8_t x, uint8_t y)
 
 #endif
 
+static void dynamicKeyExpansion(uint8_t roundNum, uint8_t* roundKey)
+{
+  uint8_t tempa[4]; // Used for the column/row operations
+
+  // Get the last word and rot and sub
+
+  // Rot included
+  tempa[0]=roundKey[13];
+  tempa[1]=roundKey[14];
+  tempa[2]=roundKey[15];
+  tempa[3]=roundKey[12];
+
+  // Sub
+  tempa[0]=getSBoxValue(tempa[0]);
+  tempa[1]=getSBoxValue(tempa[1]);
+  tempa[2]=getSBoxValue(tempa[2]);
+  tempa[3]=getSBoxValue(tempa[3]);
+
+  // RCon
+  tempa[0]=tempa[0]^Rcon[roundNum];
+
+  // Write first word
+  roundKey[0] ^= tempa[0];
+  roundKey[1] ^= tempa[1];
+  roundKey[2] ^= tempa[2];
+  roundKey[3] ^= tempa[3];
+
+  // Write the remaining words
+  for (uint8_t i = 1; i < 4; i++)
+  {
+    uint8_t k = 4*i;
+    roundKey[k] ^= roundKey[k-4];
+    roundKey[k+1] ^= roundKey[k-3];
+    roundKey[k+2] ^= roundKey[k-2];
+    roundKey[k+3] ^= roundKey[k-1];
+  }
+}
+
 // Cipher is the main function that encrypts the PlainText.
-static void Cipher(state_t* state, const uint8_t* RoundKey)
+static void Cipher(state_t* state, uint8_t* RoundKey)
 {
   uint8_t round = 0;
 
   // Add the First round key to the state before starting the rounds.
-  AddRoundKey(0, state, RoundKey);
+  dynamicAddRoundKey(state, RoundKey);
 
   // There will be Nr rounds.
   // The first Nr-1 rounds are identical.
@@ -303,10 +281,13 @@ static void Cipher(state_t* state, const uint8_t* RoundKey)
       break;
     }
     MixColumns(state);
-    AddRoundKey(round, state, RoundKey);
+
+    dynamicKeyExpansion(round, RoundKey);
+    dynamicAddRoundKey(state, RoundKey);
   }
   // Add round key to last round
-  AddRoundKey(Nr, state, RoundKey);
+    dynamicKeyExpansion(round, RoundKey);
+    dynamicAddRoundKey(state, RoundKey);
 }
 
 /*****************************************************************************/
@@ -314,8 +295,7 @@ static void Cipher(state_t* state, const uint8_t* RoundKey)
 /*****************************************************************************/
 #if defined(ECB) && (ECB == 1)
 
-
-void AES_ECB_encrypt(const struct AES_ctx* ctx, uint8_t* buf)
+void AES_ECB_encrypt(struct AES_ctx* ctx, uint8_t* buf)
 {
   // The next function call encrypts the PlainText with the Key using AES algorithm.
   Cipher((state_t*)buf, ctx->RoundKey);
