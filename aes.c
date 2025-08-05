@@ -113,8 +113,9 @@ static uint8_t getSBoxValue(uint8_t num)
 
 void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key)
 {
+  uint8_t i;
   // Loading key
-  for (uint8_t i = 0; i < AES_KEYLEN; i++)
+  for (i = 0; i < AES_KEYLEN; i++)
   {
     ctx->RoundKey[i] = key[i];
   }
@@ -251,7 +252,8 @@ static void dynamicKeyExpansion(uint8_t roundNum, uint8_t* roundKey)
   roundKey[3] ^= tempa[3];
 
   // Write the remaining words
-  for (uint8_t i = 1; i < 4; i++)
+  uint8_t i;
+  for (i = 1; i < 4; i++)
   {
     uint8_t k = 4*i;
     roundKey[k] ^= roundKey[k-4];

@@ -40,6 +40,10 @@ aes.o : aes.c aes.h
 	$(CC) $(CFLAGS) -o $@ $<
 	size $@
 
+aes.spc5.o: aes.c aes.h
+	C:\SPC5Studio-6.0\eclipse\plugins\com.st.tools.spc5.tools.gnu.gcc.ppcvle.win32_4.9.4.20200908161514\toolchain\bin\ppc-freevle-eabi-gcc.exe -Wall -Os -c aes.c -o aes.spc5.o
+	size $@
+
 test.elf : aes.o test.o
 	echo [LD] $@
 	$(LD) $(LDFLAGS) -o $@ $^
