@@ -177,7 +177,12 @@ static void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key)
 
 void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key)
 {
-  KeyExpansion(ctx->RoundKey, key);
+  // Loading key
+  for (uint8_t i = 0; i < 16; i++)
+  {
+    ctx->RoundKey[i] = key[i];
+  }
+  
 }
 
 // This function adds the round key to state.
@@ -190,6 +195,20 @@ static void AddRoundKey(uint8_t round, state_t* state, const uint8_t* RoundKey)
     for (j = 0; j < 4; ++j)
     {
       (*state)[i][j] ^= RoundKey[(round * Nb * 4) + (i * Nb) + j];
+    }
+  }
+}
+
+// This function adds the round key to state.
+// The round key is added to the state by an XOR function.
+static void dynamicAddRoundKey(state_t* state, const uint8_t* RoundKey)
+{
+  uint8_t i,j;
+  for (i = 0; i < 4; ++i)
+  {
+    for (j = 0; j < 4; ++j)
+    {
+      (*state)[i][j] ^= RoundKey[(i * Nb) + j];
     }
   }
 }
@@ -283,6 +302,44 @@ static uint8_t Multiply(uint8_t x, uint8_t y)
 
 #endif
 
+static void dynamicKeyExpansion(uint8_t roundNum, uint8_t* roundKey)
+{
+  uint8_t tempa[4]; // Used for the column/row operations
+
+  // Get the last word and rot and sub
+
+  // Rot included
+  tempa[0]=roundKey[13];
+  tempa[1]=roundKey[14];
+  tempa[2]=roundKey[15];
+  tempa[3]=roundKey[12];
+
+  // Sub
+  tempa[0]=getSBoxValue(tempa[0]);
+  tempa[1]=getSBoxValue(tempa[1]);
+  tempa[2]=getSBoxValue(tempa[2]);
+  tempa[3]=getSBoxValue(tempa[3]);
+
+  // RCon
+  tempa[0]=tempa[0]^Rcon[roundNum];
+
+  // Write first word
+  roundKey[0] ^= tempa[0];
+  roundKey[1] ^= tempa[1];
+  roundKey[2] ^= tempa[2];
+  roundKey[3] ^= tempa[3];
+
+  // Write the remaining words
+  for (uint8_t i = 1; i < 4; i++)
+  {
+    uint8_t k = 4*i;
+    roundKey[k] ^= roundKey[k-4];
+    roundKey[k+1] ^= roundKey[k-3];
+    roundKey[k+2] ^= roundKey[k-2];
+    roundKey[k+3] ^= roundKey[k-1];
+  }
+}
+
 // Cipher is the main function that encrypts the PlainText.
 static void Cipher(state_t* state, const uint8_t* RoundKey)
 {
@@ -303,10 +360,14 @@ static void Cipher(state_t* state, const uint8_t* RoundKey)
       break;
     }
     MixColumns(state);
-    AddRoundKey(round, state, RoundKey);
+    // TODO: RoundKey Computation Here. (Need 16 bytes, or 4 words)
+    dynamicKeyExpansion(round, RoundKey);
+    dynamicAddRoundKey(state, RoundKey);
   }
   // Add round key to last round
-  AddRoundKey(Nr, state, RoundKey);
+    dynamicKeyExpansion(round, RoundKey);
+    dynamicAddRoundKey(state, RoundKey);
+  //AddRoundKey(Nr, state, RoundKey);
 }
 
 /*****************************************************************************/
