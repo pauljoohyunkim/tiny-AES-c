@@ -5,10 +5,7 @@
 #include <stddef.h>
 
 // The #ifndef-guard allows it to be configured before #include'ing or at compile time.
-#define AES128 1
-#define AES_BLOCKLEN 16 // Block length in bytes - AES is 128b block only
 #define AES_KEYLEN 16 // Key length in bytes
-#define AES_keyExpSize 176
 
 struct AES_ctx
 {
