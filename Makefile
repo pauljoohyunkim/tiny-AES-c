@@ -38,7 +38,7 @@ aes.o : aes.c aes.h
 # SBOX is now not hardcoded, but computed.
 # CSBOX: Computing SBOX
 aes.csbox.o : aes.c aes.h
-	echo [CC] $@ $(CFLAGS) OHMYGOD-EDITION
+	echo [CC] $@ $(CFLAGS) CSBOX-Edition
 	$(CC) $(CFLAGS) -DSBOXCOMPUTE=1 -o $@ $<
 	size $@
 
@@ -51,6 +51,10 @@ aes.spc5.csbox.o: aes.c aes.h
 	size $@
 
 test.elf : aes.o test.o
+	echo [LD] $@
+	$(LD) $(LDFLAGS) -o $@ $^
+
+test.csbox.elf: aes.csbox.o test.o
 	echo [LD] $@
 	$(LD) $(LDFLAGS) -o $@ $^
 
@@ -72,9 +76,10 @@ clean:
 	rm -f *.OBJ *.LST *.o *.gch *.out *.hex *.map *.elf *.a
 
 test: test.elf
-	make test.elf && ./test.elf
-#	make clean && make AES192=1 && ./test.elf
-#	make clean && make AES256=1 && ./test.elf
+	make $< && ./$<
+
+test.csbox: test.csbox.elf
+	make $< && ./$<
 
 lint:
 	$(call SPLINT)
