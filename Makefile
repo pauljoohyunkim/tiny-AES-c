@@ -2,17 +2,12 @@
 #CFLAGS       = -Wall -mmcu=atmega16 -Os -Wl,-Map,test.map
 #OBJCOPY      = avr-objcopy
 CC           = gcc
+PPCGCC		 = C:\SPC5Studio-6.0\eclipse\plugins\com.st.tools.spc5.tools.gnu.gcc.ppcvle.win32_4.9.4.20200908161514\toolchain\bin\ppc-freevle-eabi-gcc.exe
 LD           = gcc
 AR           = ar
 ARFLAGS      = rcs
 CFLAGS       = -Wall -Os -c
 LDFLAGS      = -Wall -Os -Wl,-Map,test.map
-ifdef AES192
-CFLAGS += -DAES192=1
-endif
-ifdef AES256
-CFLAGS += -DAES256=1
-endif
 
 OBJCOPYFLAGS = -j .text -O ihex
 OBJCOPY      = objcopy
@@ -41,25 +36,29 @@ aes.o : aes.c aes.h
 	size $@
 
 # SBOX is now not hardcoded, but computed.
-# Hence... oh my god, what have I done.
-ohmygod : aes.c aes.h
+# CSBOX: Computing SBOX
+aes.csbox.o : aes.c aes.h
 	echo [CC] $@ $(CFLAGS) OHMYGOD-EDITION
-	$(CC) $(CFLAGS) -DSBOXCOMPUTE=1 -o aes.o $<
-	size aes.o
-
-aes.spc5.o: aes.c aes.h
-	C:\SPC5Studio-6.0\eclipse\plugins\com.st.tools.spc5.tools.gnu.gcc.ppcvle.win32_4.9.4.20200908161514\toolchain\bin\ppc-freevle-eabi-gcc.exe -Wall -Os -c aes.c -o aes.spc5.o
+	$(CC) $(CFLAGS) -DSBOXCOMPUTE=1 -o $@ $<
 	size $@
 
-aes.spc5.ohmygod: aes.c aes.h
-	C:\SPC5Studio-6.0\eclipse\plugins\com.st.tools.spc5.tools.gnu.gcc.ppcvle.win32_4.9.4.20200908161514\toolchain\bin\ppc-freevle-eabi-gcc.exe -Wall -Os -DSBOXCOMPUTE=1 -c aes.c -o aes.spc5.o
-	size aes.spc5.o
+aes.spc5.o: aes.c aes.h
+	$(PPCGCC) -Wall -Os -c aes.c -o $@
+	size $@
+
+aes.spc5.csbox.o: aes.c aes.h
+	$(PPCGCC) -Wall -Os -DSBOXCOMPUTE=1 -c aes.c -o $@
+	size $@
 
 test.elf : aes.o test.o
 	echo [LD] $@
 	$(LD) $(LDFLAGS) -o $@ $^
 
 aes.a : aes.o
+	echo [AR] $@
+	$(AR) $(ARFLAGS) $@ $^
+
+aes.csbox.a: aes.csbox.o
 	echo [AR] $@
 	$(AR) $(ARFLAGS) $@ $^
 
