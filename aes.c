@@ -1,7 +1,7 @@
 /*
 
-This is an implementation of the AES algorithm, specifically ECB, CTR and CBC mode.
-Block size can be chosen in aes.h - available choices are AES128, AES192, AES256.
+This is an implementation of the AES algorithm.
+The only available choice is AES128 encryption. (No decryption given here!)
 
 The implementation is verified against the test vectors in:
   National Institute of Standards and Technology Special Publication 800-38A 2001 ED
@@ -27,8 +27,6 @@ ECB-AES128
 
 NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
         You should pad the end of the string with zeros if this is not the case.
-        For AES192/256 the key size is proportionally larger.
-
 */
 
 
@@ -42,7 +40,6 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 /*****************************************************************************/
 // The number of columns comprising a state in AES. This is a constant in AES. Value=4
 #define Nb 4
-
 #define Nk 4        // The number of 32 bit words in a key.
 #define Nr 10       // The number of rounds in AES Cipher.
 
@@ -53,15 +50,16 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
   #define MULTIPLY_AS_A_FUNCTION 0
 #endif
 
-
-
+#ifdef SBOXCOMPUTE
+#define AES_INV_CHAIN_LEN               11u
+#define AES_REDUCE_BYTE                 0x1Bu
+#endif // SBOXCOMPUTE
 
 /*****************************************************************************/
 /* Private variables:                                                        */
 /*****************************************************************************/
 // state - array holding the intermediate results during decryption.
 typedef uint8_t state_t[4][4];
-
 
 #ifndef SBOXCOMPUTE
 // The lookup-tables are marked const so they can be placed in read-only storage instead of RAM
@@ -86,29 +84,33 @@ static const uint8_t sbox[256] = {
   0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
   0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 };
 
-#define getSBoxValue(num) (sbox[(num)])
-#else
-#define AES_INV_CHAIN_LEN               11u
-#define AES_REDUCE_BYTE                 0x1Bu
-static uint8_t aes_sbox(uint8_t a);
-static uint8_t aes_inv(uint8_t a);
-static uint8_t aes_mul(uint8_t a, uint8_t b);
-static inline uint8_t aes_mul2(uint8_t a);
-static inline uint8_t aes_rotate_left_uint8(uint8_t a, uint_fast8_t num_bits)
+#endif  // SBOXCOMPUTE
+
+// The round constant word array, Rcon[i], contains the values given by 
+// x to the power (i-1) being powers of x (x is denoted as {02}) in the field GF(2^8)
+static const uint8_t Rcon[11] = {
+  0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 };
+
+/*
+ * Jordan Goulder points out in PR #12 (https://github.com/kokke/tiny-AES-C/pull/12),
+ * that you can remove most of the elements in the Rcon array, because they are unused.
+ *
+ * From Wikipedia's article on the Rijndael key schedule @ https://en.wikipedia.org/wiki/Rijndael_key_schedule#Rcon
+ * 
+ * "Only the first some of these constants are actually used – up to rcon[10] for AES-128 (as 11 round keys are needed), 
+ *  up to rcon[8] for AES-192, up to rcon[7] for AES-256. rcon[0] is not used in AES algorithm."
+ */
+
+
+/*****************************************************************************/
+/* Private functions:                                                        */
+/*****************************************************************************/
+
+#ifdef SBOXCOMPUTE
+
+static inline uint8_t aes_mul2(uint8_t a)
 {
-    return ((a << num_bits) | (a >> (8u - num_bits)));
-}
-static uint8_t aes_sbox(uint8_t a)
-{
-    uint8_t x;
-
-    a = aes_inv(a);
-
-    x = aes_rotate_left_uint8(a, 1u);
-    x ^= aes_rotate_left_uint8(x, 1u);
-    x ^= aes_rotate_left_uint8(x, 2u);
-
-    return a ^ x ^ 0x63u;
+    return (a << 1u) ^ ((-(a >= 0x80u)) & AES_REDUCE_BYTE);
 }
 
 static uint8_t aes_mul(uint8_t a, uint8_t b)
@@ -133,11 +135,6 @@ static uint8_t aes_mul(uint8_t a, uint8_t b)
     return result;
 }
 
-static inline uint8_t aes_mul2(uint8_t a)
-{
-    return (a << 1u) ^ ((-(a >= 0x80u)) & AES_REDUCE_BYTE);
-}
-
 static uint8_t aes_inv(uint8_t a)
 {
     static const uint8_t addition_chain_idx[AES_INV_CHAIN_LEN] = { 0, 1, 1, 3, 4, 3, 6, 7, 3, 9, 1 };
@@ -151,34 +148,29 @@ static uint8_t aes_inv(uint8_t a)
     }
     return a;
 }
-#define getSBoxValue(num) (aes_sbox(num))
-#endif
 
-// The round constant word array, Rcon[i], contains the values given by 
-// x to the power (i-1) being powers of x (x is denoted as {02}) in the field GF(2^8)
-static const uint8_t Rcon[11] = {
-  0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 };
-
-/*
- * Jordan Goulder points out in PR #12 (https://github.com/kokke/tiny-AES-C/pull/12),
- * that you can remove most of the elements in the Rcon array, because they are unused.
- *
- * From Wikipedia's article on the Rijndael key schedule @ https://en.wikipedia.org/wiki/Rijndael_key_schedule#Rcon
- * 
- * "Only the first some of these constants are actually used – up to rcon[10] for AES-128 (as 11 round keys are needed), 
- *  up to rcon[8] for AES-192, up to rcon[7] for AES-256. rcon[0] is not used in AES algorithm."
- */
-
-
-/*****************************************************************************/
-/* Private functions:                                                        */
-/*****************************************************************************/
-/*
-static uint8_t getSBoxValue(uint8_t num)
+static inline uint8_t aes_rotate_left_uint8(uint8_t a, uint_fast8_t num_bits)
 {
-  return sbox[num];
+    return ((a << num_bits) | (a >> (8u - num_bits)));
 }
-*/
+
+static uint8_t aes_sbox(uint8_t a)
+{
+    uint8_t x;
+
+    a = aes_inv(a);
+
+    x = aes_rotate_left_uint8(a, 1u);
+    x ^= aes_rotate_left_uint8(x, 1u);
+    x ^= aes_rotate_left_uint8(x, 2u);
+
+    return a ^ x ^ 0x63u;
+}
+
+#define getSBoxValue(num) (aes_sbox(num))
+#else   // SBOXCOMPUTE
+#define getSBoxValue(num) (sbox[(num)])
+#endif  // SBOXCOMPUTE
 
 void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key)
 {
@@ -364,12 +356,8 @@ static void Cipher(state_t* state, uint8_t* RoundKey)
 /*****************************************************************************/
 /* Public functions:                                                         */
 /*****************************************************************************/
-#if defined(ECB) && (ECB == 1)
-
-void AES_ECB_encrypt(struct AES_ctx* ctx, uint8_t* buf)
+void AES128Encrypt(struct AES_ctx* ctx, uint8_t* buf)
 {
   // The next function call encrypts the PlainText with the Key using AES algorithm.
   Cipher((state_t*)buf, ctx->RoundKey);
 }
-
-#endif // #if defined(ECB) && (ECB == 1)
