@@ -16,7 +16,6 @@ struct AES_ctx
 };
 
 void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key);
-
-void AES_ECB_encrypt(struct AES_ctx* ctx, uint8_t* buf);
+void AES128Encrypt(struct AES_ctx* ctx, uint8_t* buf);
 
 #endif // _AES_H_

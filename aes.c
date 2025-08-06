@@ -359,7 +359,7 @@ static void Cipher(state_t* state, uint8_t* RoundKey)
 /*****************************************************************************/
 /* Public functions:                                                         */
 /*****************************************************************************/
-void AES_ECB_encrypt(struct AES_ctx* ctx, uint8_t* buf)
+void AES128Encrypt(struct AES_ctx* ctx, uint8_t* buf)
 {
   // The next function call encrypts the PlainText with the Key using AES algorithm.
   Cipher((state_t*)buf, ctx->RoundKey);
