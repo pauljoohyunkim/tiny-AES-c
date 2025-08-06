@@ -2,34 +2,17 @@
 #include <string.h>
 #include <stdint.h>
 
-// Enable ECB, CTR and CBC mode. Note this can be done before including aes.h or at compile-time.
-// E.g. with GCC by using the -D flag: gcc -c aes.c -DCBC=0 -DCTR=1 -DECB=1
-#define CBC 1
-#define CTR 1
-#define ECB 1
-
 #include "aes.h"
-
 
 static void phex(uint8_t* str);
 static int test_encrypt_ecb(void);
 static void test_encrypt_ecb_verbose(void);
 
-
 int main(void)
 {
     int exit;
 
-#if defined(AES256)
-    printf("\nTesting AES256\n\n");
-#elif defined(AES192)
-    printf("\nTesting AES192\n\n");
-#elif defined(AES128)
     printf("\nTesting AES128\n\n");
-#else
-    printf("You need to specify a symbol between AES128, AES192 or AES256. Exiting");
-    return 0;
-#endif
 
     exit = test_encrypt_ecb();
     test_encrypt_ecb_verbose();
@@ -42,13 +25,7 @@ int main(void)
 static void phex(uint8_t* str)
 {
 
-#if defined(AES256)
-    uint8_t len = 32;
-#elif defined(AES192)
-    uint8_t len = 24;
-#elif defined(AES128)
     uint8_t len = 16;
-#endif
 
     unsigned char i;
     for (i = 0; i < len; ++i)

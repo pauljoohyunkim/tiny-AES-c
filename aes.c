@@ -55,9 +55,6 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 #define AES_REDUCE_BYTE                 0x1Bu
 #endif // SBOXCOMPUTE
 
-
-
-
 /*****************************************************************************/
 /* Private variables:                                                        */
 /*****************************************************************************/
