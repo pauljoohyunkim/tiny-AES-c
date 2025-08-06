@@ -62,6 +62,8 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 // state - array holding the intermediate results during decryption.
 typedef uint8_t state_t[4][4];
 
+
+#ifndef SBOXCOMPUTE
 // The lookup-tables are marked const so they can be placed in read-only storage instead of RAM
 // The numbers below can be computed dynamically trading ROM for RAM - 
 // This can be useful in (embedded) bootloader applications, where ROM is often limited.
@@ -83,6 +85,74 @@ static const uint8_t sbox[256] = {
   0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e,
   0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
   0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 };
+
+#define getSBoxValue(num) (sbox[(num)])
+#else
+#define AES_INV_CHAIN_LEN               11u
+#define AES_REDUCE_BYTE                 0x1Bu
+static uint8_t aes_sbox(uint8_t a);
+static uint8_t aes_inv(uint8_t a);
+static uint8_t aes_mul(uint8_t a, uint8_t b);
+static inline uint8_t aes_mul2(uint8_t a);
+static inline uint8_t aes_rotate_left_uint8(uint8_t a, uint_fast8_t num_bits)
+{
+    return ((a << num_bits) | (a >> (8u - num_bits)));
+}
+static uint8_t aes_sbox(uint8_t a)
+{
+    uint8_t x;
+
+    a = aes_inv(a);
+
+    x = aes_rotate_left_uint8(a, 1u);
+    x ^= aes_rotate_left_uint8(x, 1u);
+    x ^= aes_rotate_left_uint8(x, 2u);
+
+    return a ^ x ^ 0x63u;
+}
+
+static uint8_t aes_mul(uint8_t a, uint8_t b)
+{
+    uint8_t         result = 0;
+    uint_fast8_t    i;
+    for (i = 0; i < 8u; i++)
+    {
+#if 0
+        /* This code variant is less likely to have constant execution time,
+         * and thus more likely to be vulnerable to timing attacks. */
+        if (b & 1)
+        {
+            result ^= a;
+        }
+#else
+        result ^= (-(b & 1u)) & a;
+#endif
+        a = aes_mul2(a);
+        b >>= 1;
+    }
+    return result;
+}
+
+static inline uint8_t aes_mul2(uint8_t a)
+{
+    return (a << 1u) ^ ((-(a >= 0x80u)) & AES_REDUCE_BYTE);
+}
+
+static uint8_t aes_inv(uint8_t a)
+{
+    static const uint8_t addition_chain_idx[AES_INV_CHAIN_LEN] = { 0, 1, 1, 3, 4, 3, 6, 7, 3, 9, 1 };
+    uint_fast8_t    i;
+    uint8_t         prev_values[AES_INV_CHAIN_LEN];
+
+    for (i = 0; i < AES_INV_CHAIN_LEN; i++)
+    {
+        prev_values[i] = a;
+        a = aes_mul(a, prev_values[addition_chain_idx[i]]);
+    }
+    return a;
+}
+#define getSBoxValue(num) (aes_sbox(num))
+#endif
 
 // The round constant word array, Rcon[i], contains the values given by 
 // x to the power (i-1) being powers of x (x is denoted as {02}) in the field GF(2^8)
@@ -109,7 +179,6 @@ static uint8_t getSBoxValue(uint8_t num)
   return sbox[num];
 }
 */
-#define getSBoxValue(num) (sbox[(num)])
 
 void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key)
 {

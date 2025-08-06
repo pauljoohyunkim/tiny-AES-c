@@ -40,9 +40,20 @@ aes.o : aes.c aes.h
 	$(CC) $(CFLAGS) -o $@ $<
 	size $@
 
+# SBOX is now not hardcoded, but computed.
+# Hence... oh my god, what have I done.
+ohmygod : aes.c aes.h
+	echo [CC] $@ $(CFLAGS) OHMYGOD-EDITION
+	$(CC) $(CFLAGS) -DSBOXCOMPUTE=1 -o aes.o $<
+	size aes.o
+
 aes.spc5.o: aes.c aes.h
 	C:\SPC5Studio-6.0\eclipse\plugins\com.st.tools.spc5.tools.gnu.gcc.ppcvle.win32_4.9.4.20200908161514\toolchain\bin\ppc-freevle-eabi-gcc.exe -Wall -Os -c aes.c -o aes.spc5.o
 	size $@
+
+aes.spc5.ohmygod: aes.c aes.h
+	C:\SPC5Studio-6.0\eclipse\plugins\com.st.tools.spc5.tools.gnu.gcc.ppcvle.win32_4.9.4.20200908161514\toolchain\bin\ppc-freevle-eabi-gcc.exe -Wall -Os -DSBOXCOMPUTE=1 -c aes.c -o aes.spc5.o
+	size aes.spc5.o
 
 test.elf : aes.o test.o
 	echo [LD] $@
@@ -62,7 +73,7 @@ clean:
 	rm -f *.OBJ *.LST *.o *.gch *.out *.hex *.map *.elf *.a
 
 test: test.elf
-	make clean && make test.elf && ./test.elf
+	make test.elf && ./test.elf
 #	make clean && make AES192=1 && ./test.elf
 #	make clean && make AES256=1 && ./test.elf
 
