@@ -19,10 +19,12 @@ This implementation is verified against the data in:
 #### Compilation
 To compile the files, run any of the following:
 ```
-make aes.o          // Tiny AES128 Implementation
-make aes.a          // Archive File
-make aes.csbox.o    // Even Tinier AES128 Implementation
-make aes.csbox.a    // Even Tinier Archive File
-make test           // Testing Tiny AES128
-make test.csbox     // Testing Even Tinier AES128
+make aes.o              // Tiny AES128 Implementation
+make aes.a              // Archive File (You can also run make lib)
+make aes.csbox.o        // Even Tinier AES128 Implementation
+make aes.csbox.a        // Even Tinier Archive File
+make test               // Testing Tiny AES128
+make test.csbox         // Testing Even Tinier AES128
+make aes.spc5.o         // Compile for SPC5 boards
+make aes.spc5.csbox.o   // Compile even tinier version for SPC5 boards.
 ```
