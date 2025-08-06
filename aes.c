@@ -1,7 +1,7 @@
 /*
 
-This is an implementation of the AES algorithm, specifically ECB, CTR and CBC mode.
-Block size can be chosen in aes.h - available choices are AES128, AES192, AES256.
+This is an implementation of the AES algorithm.
+The only available choice is AES128 encryption. (No decryption given here!)
 
 The implementation is verified against the test vectors in:
   National Institute of Standards and Technology Special Publication 800-38A 2001 ED
@@ -27,8 +27,6 @@ ECB-AES128
 
 NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
         You should pad the end of the string with zeros if this is not the case.
-        For AES192/256 the key size is proportionally larger.
-
 */
 
 
@@ -42,7 +40,6 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 /*****************************************************************************/
 // The number of columns comprising a state in AES. This is a constant in AES. Value=4
 #define Nb 4
-
 #define Nk 4        // The number of 32 bit words in a key.
 #define Nr 10       // The number of rounds in AES Cipher.
 
@@ -53,6 +50,11 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
   #define MULTIPLY_AS_A_FUNCTION 0
 #endif
 
+#ifdef SBOXCOMPUTE
+#define AES_INV_CHAIN_LEN               11u
+#define AES_REDUCE_BYTE                 0x1Bu
+#endif // SBOXCOMPUTE
+
 
 
 
@@ -61,7 +63,6 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 /*****************************************************************************/
 // state - array holding the intermediate results during decryption.
 typedef uint8_t state_t[4][4];
-
 
 #ifndef SBOXCOMPUTE
 // The lookup-tables are marked const so they can be placed in read-only storage instead of RAM
@@ -87,9 +88,7 @@ static const uint8_t sbox[256] = {
   0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 };
 
 #define getSBoxValue(num) (sbox[(num)])
-#else
-#define AES_INV_CHAIN_LEN               11u
-#define AES_REDUCE_BYTE                 0x1Bu
+#else   // SBOXCOMPUTE
 static uint8_t aes_sbox(uint8_t a);
 static uint8_t aes_inv(uint8_t a);
 static uint8_t aes_mul(uint8_t a, uint8_t b);
@@ -152,7 +151,7 @@ static uint8_t aes_inv(uint8_t a)
     return a;
 }
 #define getSBoxValue(num) (aes_sbox(num))
-#endif
+#endif  // SBOXCOMPUTE
 
 // The round constant word array, Rcon[i], contains the values given by 
 // x to the power (i-1) being powers of x (x is denoted as {02}) in the field GF(2^8)
@@ -173,12 +172,6 @@ static const uint8_t Rcon[11] = {
 /*****************************************************************************/
 /* Private functions:                                                        */
 /*****************************************************************************/
-/*
-static uint8_t getSBoxValue(uint8_t num)
-{
-  return sbox[num];
-}
-*/
 
 void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key)
 {
@@ -364,12 +357,8 @@ static void Cipher(state_t* state, uint8_t* RoundKey)
 /*****************************************************************************/
 /* Public functions:                                                         */
 /*****************************************************************************/
-#if defined(ECB) && (ECB == 1)
-
 void AES_ECB_encrypt(struct AES_ctx* ctx, uint8_t* buf)
 {
   // The next function call encrypts the PlainText with the Key using AES algorithm.
   Cipher((state_t*)buf, ctx->RoundKey);
 }
-
-#endif // #if defined(ECB) && (ECB == 1)
