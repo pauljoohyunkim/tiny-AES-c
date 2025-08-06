@@ -89,8 +89,11 @@ static const uint8_t sbox[256] = {
 #define getSBoxValue(num) (sbox[(num)])
 #else
 #define AES_INV_CHAIN_LEN               11u
+#define AES_REDUCE_BYTE                 0x1Bu
 static uint8_t aes_sbox(uint8_t a);
 static uint8_t aes_inv(uint8_t a);
+static uint8_t aes_mul(uint8_t a, uint8_t b);
+static inline uint8_t aes_mul2(uint8_t a);
 static inline uint8_t aes_rotate_left_uint8(uint8_t a, uint_fast8_t num_bits)
 {
     return ((a << num_bits) | (a >> (8u - num_bits)));
@@ -106,6 +109,33 @@ static uint8_t aes_sbox(uint8_t a)
     x ^= aes_rotate_left_uint8(x, 2u);
 
     return a ^ x ^ 0x63u;
+}
+
+static uint8_t aes_mul(uint8_t a, uint8_t b)
+{
+    uint8_t         result = 0;
+    uint_fast8_t    i;
+    for (i = 0; i < 8u; i++)
+    {
+#if 0
+        /* This code variant is less likely to have constant execution time,
+         * and thus more likely to be vulnerable to timing attacks. */
+        if (b & 1)
+        {
+            result ^= a;
+        }
+#else
+        result ^= (-(b & 1u)) & a;
+#endif
+        a = aes_mul2(a);
+        b >>= 1;
+    }
+    return result;
+}
+
+static inline uint8_t aes_mul2(uint8_t a)
+{
+    return (a << 1u) ^ ((-(a >= 0x80u)) & AES_REDUCE_BYTE);
 }
 
 static uint8_t aes_inv(uint8_t a)

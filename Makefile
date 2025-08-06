@@ -40,6 +40,7 @@ aes.o : aes.c aes.h
 	$(CC) $(CFLAGS) -o $@ $<
 	size $@
 
+# SBOX is now not hardcoded, but computed.
 ohmygod : aes.c aes.h
 	echo [CC] $@ $(CFLAGS)
 	$(CC) $(CFLAGS) -DSBOXCOMPUTE=1 -o aes.o $<
