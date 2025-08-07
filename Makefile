@@ -6,8 +6,10 @@ PPCGCC		 = C:\SPC5Studio-6.0\eclipse\plugins\com.st.tools.spc5.tools.gnu.gcc.ppc
 LD           = gcc
 AR           = ar
 ARFLAGS      = rcs
-CFLAGS       = -Wall -Os -c
-LDFLAGS      = -Wall -Os -Wl,-Map,test.map
+#CFLAGS       = -Wall -Os -c
+#LDFLAGS      = -Wall -Os -Wl,-Map,test.map
+CFLAGS       = -Wall -Oz -c
+LDFLAGS      = -Wall -Oz -Wl,-Map,test.map
 
 OBJCOPYFLAGS = -j .text -O ihex
 OBJCOPY      = objcopy
@@ -43,11 +45,11 @@ aes.csbox.o : aes.c aes.h
 	size $@
 
 aes.spc5.o: aes.c aes.h
-	$(PPCGCC) -Wall -Os -c aes.c -o $@
+	$(PPCGCC) $(CFLAGS) -c aes.c -o $@
 	size $@
 
 aes.spc5.csbox.o: aes.c aes.h
-	$(PPCGCC) -Wall -Os -DSBOXCOMPUTE=1 -c aes.c -o $@
+	$(PPCGCC) $(CFLAGS) -DSBOXCOMPUTE=1 -c aes.c -o $@
 	size $@
 
 test.elf : aes.o test.o
